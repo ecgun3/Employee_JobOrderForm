@@ -1,2 +1,3 @@
-<img width="419" alt="image" src="https://github.com/user-attachments/assets/26898cab-18ad-475c-88b5-86dd892dce12">
+<img width="499" alt="Ekran Resmi 2024-08-02 19 53 41" src="https://github.com/user-attachments/assets/662b80b7-87e1-4b99-8806-9cf501e80be0">
+
 
