@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 //İsim soyisim başta dursun,
 //Enter'a basınca sıradaki textbox'A veya combobox'a gitsin
@@ -10,13 +12,19 @@ namespace İs_Emri_Formu
     public partial class Form1 : Form
     {
         SqlConnection connectionString = new SqlConnection(System.Configuration.ConfigurationSettings.AppSettings["ConnectionString"]);
-        
+
+        string projeKodu;
+
+        private List<string> JobDescriptions = new List<string> {};
+        private DataStorage storage = new DataStorage(); // DataStorage sınıfı oluşturuluyor
+
+
+
         public Form1()
         {
             InitializeComponent();
 
             //Click olayını ekleyelim:
-            isEmriNo.Click += new EventHandler(isEmriNo_Click);
             İsTanim.Click += new EventHandler(İsTanim_Click);
             İsiTalepEdenTxtbox.Click += new EventHandler(İsiTalepEdenTxtbox_Click);
 
@@ -38,6 +46,14 @@ namespace İs_Emri_Formu
             Controls.Add(ProDurumuProjeChckbox);
             Controls.Add(IsıVerenBolum);
 
+            //Yukleme olaylari
+            this.Load += new EventHandler(Form1_Load);
+
+            // Başlangıçta iş tanımlarını doldur
+            JobDescriptions = storage.LoadJobDescriptions();
+            UpdateComboBox(JobDescriptions); 
+
+
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -47,7 +63,41 @@ namespace İs_Emri_Formu
 
             ProDurumuSeriChckBox.Visible = true;
             ProDurumuProjeChckbox.Visible = true;
+
+            //Is emri no olusturur
+            isEmriNo.Text = DateTime.Now.ToString("ddMMyyyyHHmmss");
+            textBoxProjeKodu.Text = ProjeKoduOlustur();
+
+            
         }
+        private string ProjeKoduOlustur()
+        {
+            //Proje kodunun tanimlanmasi
+            string projeKodu = "P" + DateTime.Now.ToString("ddMMyyyyHHmmss");
+
+            //Random random = new Random();
+
+            //int currentYear = DateTime.Now.Year;
+            //string lastTwoDigits = (currentYear % 100).ToString();
+            //int randomNumber2 = random.Next(10000, 100000);
+            //string projeKodu = "P" + lastTwoDigits + randomNumber2.ToString();
+
+
+
+
+            return projeKodu;
+        }
+
+        // ComboBox'ı güncellemek için kullanılan fonksiyon
+        private void UpdateComboBox(List<string> _jobDescriptions)
+        {
+            VerilenIsinTanimi.Items.Clear();
+            foreach (var job in _jobDescriptions)
+            {
+                VerilenIsinTanimi.Items.Add(job);
+            }
+        }
+
 
         //CLİCK OLYLARI:
 
@@ -194,22 +244,7 @@ namespace İs_Emri_Formu
             // Veritabanına kaydetme 
             Kaydet();
 
-            //Temizlemeler:
-            İsiTalepEdenTxtbox.Text = "";
-            isEmriNo.Text = "İş Emri No: ";
-            VerilenIsinTanimi.SelectedIndex = -1;
-            İsTanim.Text = "";
-            ProjeKodutxtBox.Text = "";
-            EvetChckBox.Checked = false;
-            HayırChckBox.Checked = false;
-            OneriNo.Text = "";
-            IsınYapildigiBolum.SelectedIndex = -1;
-            ProDurumuSeriChckBox.Checked = false;
-            ProDurumuProjeChckbox.Checked = false;
-            IsıVerenBolum.SelectedIndex = -1;
-            DigerSecenekLabel.Visible = false;
-            DigerSecenekTxtBox.Visible = false;
-            DigerSecenekTxtBox.Text = "";
+
         }
 
         //Kaydetme methodunu oluşturalım:
@@ -230,7 +265,8 @@ namespace İs_Emri_Formu
                                                     ProjeDurumu,
                                                     IsıVerenBolum,
                                                     GondermeTarihi,
-                                                    İsiTalepEden) 
+                                                    İsiTalepEden,
+                                                    İstenenTeslimTarihi) 
                                 VALUES  (@IsEmriNo,
                                         @VerilenIsinTanimi,
                                         @IsTanimi, 
@@ -241,14 +277,15 @@ namespace İs_Emri_Formu
                                         @ProjeDurumu,
                                         @IsıVerenBolum,
                                         GETDATE(),
-                                        @İsiTalepEden)";
+                                        @İsiTalepEden,
+                                        @İstenenTeslimTarihi)";
 
                 SqlCommand command = new SqlCommand(query, connectionString);
                 
                 command.Parameters.AddWithValue("@IsEmriNo", isEmriNo.Text);
                 command.Parameters.AddWithValue("@VerilenIsinTanimi", VerilenIsinTanimi.Text);
                 command.Parameters.AddWithValue("@IsTanimi", İsTanim.Text);
-                command.Parameters.AddWithValue("@ProjeKodu", ProjeKodutxtBox.Text);
+                command.Parameters.AddWithValue("@ProjeKodu", textBoxProjeKodu.Text);
 
                 //Oneri Checkbox seçeneğine göre Evet veya Hayır
                 if (EvetChckBox.Checked)
@@ -298,11 +335,14 @@ namespace İs_Emri_Formu
 
                 command.Parameters.AddWithValue("@İsiTalepEden", İsiTalepEdenTxtbox.Text);
 
+                command.Parameters.AddWithValue("@İstenenTeslimTarihi", dateTimePicker1.Value);
+
                 command.ExecuteNonQuery();
                 MessageBox.Show("Veritabanına başarıyla kaydedildi.");
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex);
                 MessageBox.Show("Veritabanına kaydedilirken hata oluştu: " + ex.Message);
             }
             finally
@@ -311,6 +351,26 @@ namespace İs_Emri_Formu
             }
         }
 
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            if (checkBox1.Checked)
+            {
+                textBoxProjeKodu.ReadOnly = false;
+            }
+            else
+            {
+                textBoxProjeKodu.ReadOnly = true;
+                textBoxProjeKodu.Text = ProjeKoduOlustur();
+            }
+        }
 
+        private void button_Geri_Click(object sender, EventArgs e)
+        {
+            Form3 form3 = new Form3();
+            form3.Show();
+            this.Dispose();
+
+
+        }
     }
 }
